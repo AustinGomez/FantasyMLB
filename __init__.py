@@ -10,7 +10,7 @@ app = Flask(__name__)
 api = Api(app)
 
 
-# Gets a list of all years on record.
+# Returns JSON containing all years on record
 class Year_Meta(Resource):
     def get(self):
         conn = e.connect()
@@ -19,7 +19,7 @@ class Year_Meta(Resource):
         return {'years': [i[0] for i in query.cursor.fetchall()]}
 
 
-# Returns a list of all stat categories
+# Returns a JSON of all stat categories
 class Year_Categories(Resource):
     def get(self, yearID):
         return {'categories': ['batting', 'fielding', 'pitching']}
