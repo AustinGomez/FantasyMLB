@@ -10,36 +10,38 @@ app = Flask(__name__)
 api = Api(app)
 
 
-# Returns JSON containing all playerIDs, and their respective first names and last names 
+# Returns JSON containing all years on record
 class PlayerList(Resource):
     def get(self):
         conn = e.connect()
-        query = conn.execute("select distinct playerID, nameFirst, nameLast from master")
-        data ={'data':[dict(zip(tuple (query.keys()), i)) for i in query.cursor]}
+        query = conn.execute("select distinct playerID from master")
+        data ={'data':[i[0] for i in query.cursor.fetchall()]}
         dump = dumps(data)
-        response =  Response(dump, status=200, mimetype='application/json')
+        response =  Response(dump, status=201, mimetype='application/json')
+        response.headers['Access-Control-Allow-Origin'] = '*'
         return response
 
-# Returns a JSON containing all batting and fielding stats for a specific playerID, a different json object for each year, position, or team
-# TODO: add functionality to only include stats for their respective position
+# Returns a JSON of all stat categories
 class Player(Resource):
     def get(self, playerID):
         conn = e.connect()
-        query = conn.execute("select batters.*, fielders.POS, fielders.G, fielders.InnOuts, fielders.PO, fielders.A, fielders.E, fielders.DP, fielders.PB, fielders.WP, fielders.SB, fielders.CS, fielders.ZR from batters inner join fielders on (batters.playerID=fielders.playerID and batters.yearID=fielders.yearID and batters.teamID=fielders.teamID) where batters.playerID=(?)", (playerID,))
+        query = conn.execute("select * from batters where playerID=(?)", (playerID,))
         data = {'data':[dict(zip(tuple (query.keys()), i)) for i in query.cursor]}
         dump = dumps(data)
 
-        response =  Response(dump, status=200, mimetype='application/json') 
+        response =  Response(dump, status=201, mimetype='application/json') 
+        response.headers['Access-Control-Allow-Origin'] = '*'
         return response
 
-# Returns JSON containing a players batting and fielding stats for a specific year in the same format as above.
+# Returns JSON containing all players and their respective stats.
 class PlayerYear(Resource):
     def get(self, playerID, yearID):
         conn = e.connect()
-        query = conn.execute("select batters.*, fielders.POS, fielders.G, fielders.InnOuts, fielders.PO, fielders.A, fielders.E, fielders.DP, fielders.PB, fielders.WP, fielders.SB, fielders.CS, fielders.ZR from batters inner join fielders on (batters.playerID=fielders.playerID and batters.yearID=fielders.yearID and batters.teamID=fielders.teamID) where batters.playerID=(?) and batters.yearID=(?)", (playerID, yearID))
+        query = conn.execute("select * from batters where yearID=(?) and playerID=(?)", (yearID, playerID))
         data = {'data':[dict(zip(tuple (query.keys()), i)) for i in query.cursor]}
         dump = dumps(data)
         response =  Response(dump, status=200, mimetype='application.json')
+        response.headers['Access-Control-Allow-Origin'] = '*'
         return response
 
 
@@ -50,6 +52,7 @@ class Year_Batter(Resource):
         data = {'data': [dict(zip(tuple (query.keys()), i)) for i in query.cursor]} 
         dump = dumps(data)
         response = Response(dump, status=200, mimetype='application.json')
+        response.headers['Access-Control-Allow-Origin'] = '*'
         return response
 
 api.add_resource(PlayerList, '/api/v1.0/players/')
