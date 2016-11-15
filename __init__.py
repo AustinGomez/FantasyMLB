@@ -1,5 +1,5 @@
 #!flask/bin/python
-from flask import Flask, request, make_response, jsonify, Response
+from flask import Flask, request, make_response, jsonify, Response, abort
 from flask_restful import Resource, Api
 from sqlalchemy import create_engine
 from json import dumps
@@ -7,7 +7,7 @@ from json import dumps
 e = create_engine('sqlite:////var/www/api/api/baseball.db')
 
 app = Flask(__name__)
-api = Api(app)
+api = Api(app, catch_all_404s=True)
 
 
 # Returns JSON containing all playerIDs, and their respective first names and last names 
@@ -25,7 +25,14 @@ class PlayerList(Resource):
 class Player(Resource):
     def get(self, playerID):
         conn = e.connect()
+        find_query = conn.execute("select * from master where playerID=(?)", (playerID,))
+        print playerID
+        print find_query.cursor.rowcount
+        if len(find_query.fetchall())== 0:
+            abort(404, description="Player with playerID {0} not found.".format(playerID))
+
         query = conn.execute("select batters.*, fielders.POS, fielders.G, fielders.InnOuts, fielders.PO, fielders.A, fielders.E, fielders.DP, fielders.PB, fielders.WP, fielders.SB, fielders.CS, fielders.ZR from batters inner join fielders on (batters.playerID=fielders.playerID and batters.yearID=fielders.yearID and batters.teamID=fielders.teamID) where batters.playerID=(?)", (playerID,))
+
         data = {'data':[dict(zip(tuple (query.keys()), i)) for i in query.cursor]}
         dump = dumps(data)
 
@@ -36,6 +43,7 @@ class Player(Resource):
 class PlayerYear(Resource):
     def get(self, playerID, yearID):
         conn = e.connect()
+  
         query = conn.execute("select batters.*, fielders.POS, fielders.G, fielders.InnOuts, fielders.PO, fielders.A, fielders.E, fielders.DP, fielders.PB, fielders.WP, fielders.SB, fielders.CS, fielders.ZR from batters inner join fielders on (batters.playerID=fielders.playerID and batters.yearID=fielders.yearID and batters.teamID=fielders.teamID) where batters.playerID=(?) and batters.yearID=(?)", (playerID, yearID))
         data = {'data':[dict(zip(tuple (query.keys()), i)) for i in query.cursor]}
         dump = dumps(data)
